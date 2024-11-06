@@ -3,102 +3,141 @@
 #include <string.h>
 #include <ctype.h>
 
-// Instruction encoding functions
-unsigned char encode_ra_plus_rb() { return 0x00; }
-unsigned char encode_rb_plus_ra() { return 0x10; }
-unsigned char encode_ra_minus_rb() { return 0x04; }
-unsigned char encode_rb_minus_ra() { return 0x14; }
-unsigned char encode_ro_equals_ra() { return 0x20; }
-unsigned char encode_ra_equals_imm(int imm) { return 0x08 | (imm & 0x07); }
-unsigned char encode_rb_equals_imm(int imm) { return 0x18 | (imm & 0x07); }
-unsigned char encode_jc_equals_imm(int imm) { return 0x70 | (imm & 0x07); }
-unsigned char encode_j_equals_imm(int imm) { return 0xB0 | (imm & 0x07); }
+#define MAX_LINE_LENGTH 256
+#define MAX_INSTRUCTIONS 256
 
-// Trim whitespace from string
-void trim(char* str) {
-    char* end;
-    while(isspace((unsigned char)*str)) str++;
-    if(*str == 0) return;
-    end = str + strlen(str) - 1;
-    while(end > str && isspace((unsigned char)*end)) end--;
-    end[1] = '\0';
+// Instruction structure
+typedef struct {
+    char opcode[32];
+    char operand[32];
+} Instruction;
+
+// Function to trim whitespace
+void trim(char *str) {
+    int i;
+    int begin = 0;
+    int end = strlen(str) - 1;
+
+    while (isspace((unsigned char) str[begin]))
+        begin++;
+
+    while ((end >= begin) && isspace((unsigned char) str[end]))
+        end--;
+
+    for (i = begin; i <= end; i++)
+        str[i - begin] = str[i];
+
+    str[i - begin] = '\0';
+}
+
+// Function to parse assembly instruction
+Instruction parse_instruction(char *line) {
+    Instruction inst = {"", ""};
+    char *equals = strchr(line, '=');
+    
+    if (equals) {
+        // Split at equals sign
+        *equals = '\0';
+        strcpy(inst.opcode, line);
+        strcpy(inst.operand, equals + 1);
+    } else {
+        // No equals sign, just copy the whole line as opcode
+        strcpy(inst.opcode, line);
+    }
+    
+    trim(inst.opcode);
+    trim(inst.operand);
+    
+    return inst;
+}
+
+// Function to convert instruction to machine code
+unsigned char generate_machine_code(Instruction inst) {
+    unsigned char code = 0;
+    
+    // Handle each instruction type
+    if (strcmp(inst.opcode, "RA") == 0) {
+        if (strcmp(inst.operand, "0") == 0) {
+            code = 0b00001000; // RA = 0
+        } else if (strstr(inst.operand, "RA+RB") != NULL) {
+            code = 0b00000000; // RA = RA + RB
+        } else if (strstr(inst.operand, "RA-RB") != NULL) {
+            code = 0b00000100; // RA = RA - RB
+        }
+    } else if (strcmp(inst.opcode, "RB") == 0) {
+        if (strcmp(inst.operand, "1") == 0) {
+            code = 0b00011001; // RB = 1
+        } else if (strstr(inst.operand, "RA+RB") != NULL) {
+            code = 0b00010000; // RB = RA + RB
+        } else if (strstr(inst.operand, "RA-RB") != NULL) {
+            code = 0b00010100; // RB = RA - RB
+        }
+    } else if (strcmp(inst.opcode, "RO") == 0) {
+        if (strcmp(inst.operand, "RA") == 0) {
+            code = 0b00100000; // RO = RA
+        }
+    } else if (strcmp(inst.opcode, "JC") == 0) {
+        int imm = atoi(inst.operand);
+        code = 0b01110000 | (imm & 0x07); // JC = imm
+    } else if (strcmp(inst.opcode, "J") == 0) {
+        int imm = atoi(inst.operand);
+        code = 0b10110000 | (imm & 0x07); // J = imm
+    }
+    
+    return code;
 }
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
-        printf("Usage: %s <input_file.asm>\n", argv[0]);
+        printf("Usage: %s <assembly_file>\n", argv[0]);
         return 1;
     }
 
-    FILE *input = fopen(argv[1], "r");
-    if (!input) {
-        printf("Error: Cannot open input file %s\n", argv[1]);
-        return 1;
-    }
-
-    // Create output filename by replacing .asm with .bin
-    char output_filename[256];
-    strcpy(output_filename, argv[1]);
-    char *dot = strrchr(output_filename, '.');
+    char *input_file = argv[1];
+    char output_file[256];
+    strcpy(output_file, input_file);
+    char *dot = strrchr(output_file, '.');
     if (dot) *dot = '\0';
-    strcat(output_filename, ".bin");
+    strcat(output_file, ".bin");
 
-    FILE *output = fopen(output_filename, "wb");
-    if (!output) {
-        printf("Error: Cannot create output file %s\n", output_filename);
-        fclose(input);
+    FILE *fin = fopen(input_file, "r");
+    if (!fin) {
+        printf("Error: Cannot open input file %s\n", input_file);
+        return 1;
+    }
+
+    FILE *fout = fopen(output_file, "wb");
+    if (!fout) {
+        printf("Error: Cannot create output file %s\n", output_file);
+        fclose(fin);
         return 1;
     }
 
     printf("Starting Assembler...\n");
-    printf("Reading file: %s\n", argv[1]);
+    printf("Reading file: %s\n", input_file);
 
-    char line[256];
-    int line_number = 0;
+    char line[MAX_LINE_LENGTH];
+    int line_num = 0;
 
-    while (fgets(line, sizeof(line), input)) {
-        line_number++;
-        trim(line);
-        
+    while (fgets(line, sizeof(line), fin)) {
         // Skip empty lines and comments
-        if (strlen(line) == 0 || line[0] == '#' || line[0] == ';')
+        trim(line);
+        if (strlen(line) == 0 || line[0] == '#')
             continue;
 
-        unsigned char machine_code = 0;
-        char instruction[32];
-        int value;
+        line_num++;
+        Instruction inst = parse_instruction(line);
+        unsigned char machine_code = generate_machine_code(inst);
 
-        // Parse instruction
-        if (sscanf(line, "RA=RA+RB%s", instruction) == 0)
-            machine_code = encode_ra_plus_rb();
-        else if (sscanf(line, "RB=RA+RB%s", instruction) == 0)
-            machine_code = encode_rb_plus_ra();
-        else if (sscanf(line, "RA=RA-RB%s", instruction) == 0)
-            machine_code = encode_ra_minus_rb();
-        else if (sscanf(line, "RB=RA-RB%s", instruction) == 0)
-            machine_code = encode_rb_minus_ra();
-        else if (sscanf(line, "RO=RA%s", instruction) == 0)
-            machine_code = encode_ro_equals_ra();
-        else if (sscanf(line, "RA=%d", &value) == 1)
-            machine_code = encode_ra_equals_imm(value);
-        else if (sscanf(line, "RB=%d", &value) == 1)
-            machine_code = encode_rb_equals_imm(value);
-        else if (sscanf(line, "JC=%d", &value) == 1)
-            machine_code = encode_jc_equals_imm(value);
-        else if (sscanf(line, "J=%d", &value) == 1)
-            machine_code = encode_j_equals_imm(value);
-        else {
-            printf("Error: Invalid instruction at line %d: %s\n", line_number, line);
-            continue;
-        }
-
-        printf("Line %d: %s -> Machine Code: %02X\n", line_number, line, machine_code);
-        fwrite(&machine_code, 1, 1, output);
+        printf("Line %d: %s -> Machine Code: %08b\n", 
+               line_num, line, machine_code);
+        
+        fwrite(&machine_code, sizeof(machine_code), 1, fout);
     }
 
-    printf("Successfully generated output file: %s\n", output_filename);
+    printf("Successfully generated output file: %s\n", output_file);
 
-    fclose(input);
-    fclose(output);
+    fclose(fin);
+    fclose(fout);
     return 0;
 }
