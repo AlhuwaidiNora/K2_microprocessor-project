@@ -1,85 +1,71 @@
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
-unsigned char RA = 0, RB = 0, R0 = 0;
-unsigned char PC = 0;
-unsigned char carry = 0;
+// Function prototypes
+void runContinuousMode(unsigned char* instructions, int length);
+void runStepByStepMode(unsigned char* instructions, int length);
 
-#define MEMORY_SIZE 256
-unsigned char memory[MEMORY_SIZE];
-
-void load_program(const char *filename) {
-    FILE *file = fopen(filename, "rb");
-    if (!file) {
-        perror("Error opening file");
-        exit(1);
-    }
-    fread(memory, sizeof(unsigned char), MEMORY_SIZE, file);
-    fclose(file);
-}
-
-void execute_instruction(unsigned char opcode) {
-    switch (opcode) {
-        case 0b00000000:
-            RA = RA + RB;
-            carry = (RA < RB) ? 1 : 0;
-            break;
-        case 0b00000001:
-            RB = RA + RB;
-            carry = (RB < RA) ? 1 : 0;
-            break;
-        case 0b00000010:
-            RA = RA - RB;
-            carry = (RA > 255) ? 1 : 0;
-            break;
-        case 0b00000011:
-            RB = RA - RB;
-            carry = (RB > 255) ? 1 : 0;
-            break;
-        case 0b00000100:
-            R0 = RA;
-            break;
-        case 0b00000110:
-            RA = memory[PC++];
-            break;
-        case 0b00000111:
-            RB = memory[PC++];
-            break;
-        case 0b00001101:
-            if (carry) {
-                PC = memory[PC];
-            } else {
-                PC++;
-            }
-            break;
-        case 0b00001110:
-            PC = memory[PC];
-            break;
-        default:
-            printf("Error: Unknown opcode %02X\n", opcode);
-            exit(1);
-    }
-}
-
-void run_simulator() {
-    while (PC < MEMORY_SIZE) {
-        unsigned char opcode = memory[PC++];
-        execute_instruction(opcode);
-        printf("PC: %02X, RA: %02X, RB: %02X, R0: %02X, Carry: %d\n", PC, RA, RB, R0, carry);
-        if (PC >= MEMORY_SIZE || opcode == 0xFF) {
-            printf("Program terminated.\n");
-            break;
-        }
-    }
-}
-
-int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        printf("Usage: %s <program.bin>\n", argv[0]);
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        printf("Usage: %s <binary_file>\n", argv[0]);
         return 1;
     }
-    load_program(argv[1]);
-    run_simulator();
+
+    FILE* binaryFile = fopen(argv[1], "rb");
+    if (!binaryFile) {
+        perror("Error opening binary file");
+        return 1;
+    }
+
+    // Load the binary file into memory
+    fseek(binaryFile, 0, SEEK_END);
+    int length = ftell(binaryFile);
+    rewind(binaryFile);
+
+    unsigned char* instructions = (unsigned char*)malloc(length);
+    if (!instructions) {
+        perror("Memory allocation failed");
+        fclose(binaryFile);
+        return 1;
+    }
+    fread(instructions, 1, length, binaryFile);
+    fclose(binaryFile);
+
+    printf("Loading binary file: %s\n", argv[1]);
+    printf("Select one of the following modes:\n");
+    printf("R - Run in continuous mode\n");
+    printf("S - Run step-by-step\n");
+    char mode;
+    scanf(" %c", &mode);
+
+    if (mode == 'R' || mode == 'r') {
+        runContinuousMode(instructions, length);
+    } else if (mode == 'S' || mode == 's') {
+        runStepByStepMode(instructions, length);
+    } else {
+        printf("Invalid mode selected.\n");
+    }
+
+    free(instructions);
     return 0;
+}
+
+// Function to run the simulator in continuous mode
+void runContinuousMode(unsigned char* instructions, int length) {
+    printf("Running in continuous mode...\n");
+    for (int i = 0; i < length; ++i) {
+        // Execute each instruction (example: print instruction value)
+        printf("Executing instruction: %02X\n", instructions[i]);
+    }
+}
+
+// Function to run the simulator step-by-step
+void runStepByStepMode(unsigned char* instructions, int length) {
+    printf("Running in step-by-step mode...\n");
+    for (int i = 0; i < length; ++i) {
+        printf("Executing instruction: %02X [Press Enter to continue]\n", instructions[i]);
+        getchar(); // Wait for user input to continue
+    }
 }
 
