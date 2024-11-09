@@ -1,0 +1,47 @@
+# Compiler
+CC = gcc
+
+# Source files
+ASSEMBLER_SRC = assembler.c
+SIMULATOR_SRC = simulator.c
+
+# Executable files
+ASSEMBLER_EXE = assembler
+SIMULATOR_EXE = simulator
+
+# Default target: compile both assembler and simulator
+all: $(ASSEMBLER_EXE) $(SIMULATOR_EXE)
+
+# Target to compile the assembler
+$(ASSEMBLER_EXE): $(ASSEMBLER_SRC)
+	@echo "Compiling the assembler..."
+	$(CC) -o $(ASSEMBLER_EXE) $(ASSEMBLER_SRC)
+
+# Target to compile the simulator
+$(SIMULATOR_EXE): $(SIMULATOR_SRC)
+	@echo "Compiling the simulator..."
+	$(CC) -o $(SIMULATOR_EXE) $(SIMULATOR_SRC)
+
+# Target to run the assembler with a specified file
+assemble: $(ASSEMBLER_EXE)
+	@echo "Running the assembler with file: $(FILENAME)"
+	./$(ASSEMBLER_EXE) $(FILENAME)
+
+# Target to run the simulator with a specified file
+simulate: $(SIMULATOR_EXE)
+	@echo "Running the simulator with file: $(FILENAME)"
+	./$(SIMULATOR_EXE) $(FILENAME)
+
+# Target to clean compiled files
+clean:
+	@echo "Cleaning up files..."
+	rm -f $(ASSEMBLER_EXE) $(SIMULATOR_EXE)
+
+# Target to display help
+help:
+	@echo "Available targets in Makefile:"
+	@echo " all       : Compile both programs (assembler and simulator)"
+	@echo " assemble  : Run assembler with a specified file. Use FILENAME=<file name>"
+	@echo " simulate  : Run simulator with a specified file. Use FILENAME=<file name>"
+	@echo " clean     : Remove compiled files"
+	@echo " help      : Display usage instructions for Makefile"
