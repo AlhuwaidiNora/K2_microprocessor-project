@@ -36,17 +36,17 @@ int convert_to_machine_code(const char *instruction, char *machine_code) {
     }
     clean_instruction[j] = '\0';
 
-    // Match specific instruction patterns for Fibonacci sequence
+    // Match specific instruction patterns
     if (strcmp(clean_instruction, "RA=0") == 0) {
         strncpy(machine_code, "00001000", 8);
     } else if (strcmp(clean_instruction, "RB=1") == 0) {
         strncpy(machine_code, "00011001", 8);
-    } else if (strcmp(clean_instruction, "RO=RA") == 0) {
-        strncpy(machine_code, "00100000", 8);
+    } else if (strcmp(clean_instruction, "R0=RA") == 0) {
+        strncpy(machine_code, "00100000", 8); // Example code for R0=RA
     } else if (strcmp(clean_instruction, "RB=RA+RB") == 0) {
         strncpy(machine_code, "00010000", 8);
     } else if (strcmp(clean_instruction, "JC=0") == 0) {
-                                strncpy(machine_code, "01110000", 8);
+        strncpy(machine_code, "01110000", 8);
     } else if (strcmp(clean_instruction, "RA=RA+RB") == 0) {
         strncpy(machine_code, "00000000", 8);
     } else if (strcmp(clean_instruction, "RB=RA-RB") == 0) {
@@ -82,7 +82,7 @@ int convert_to_machine_code(const char *instruction, char *machine_code) {
         int_to_binary(imm, imm_bin, 4);
         snprintf(machine_code, 9, "1011%s", imm_bin);
     } else {
-return -1;
+        return -1; // Invalid instruction
     }
 
     return 0;
@@ -128,7 +128,7 @@ int main(int argc, char *argv[]) {
     FILE *output_file = fopen(output_filename, "w");
     if (!output_file) {
         fclose(input_file);
-handle_error("Failed to create output file.");
+        handle_error("Failed to create output file.");
     }
 
     char line[MAX_LINE_LENGTH];

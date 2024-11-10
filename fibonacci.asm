@@ -1,10 +1,10 @@
-; Fibonacci sequence generator
-RA = 0      ; Initialize first number
-RB = 1      ; Initialize second number
-R0 = RA     ; Output first number
-RB = RA+RB  ; Calculate next number
-JC = 0      ; Check for carry
-RA = RA+RB  ; Update current number
-RB = RA-RB  ; Swap numbers
-RA = RA-RB  ; Complete swap
-J = 2       ; Jump back to output
+
+RA = 0
+RB = 1
+R0 = RA
+RB = RA + RB
+RA = RA + R
+RB = RA - RB
+RA = RA - RB
+JC = 0
+J = 2
