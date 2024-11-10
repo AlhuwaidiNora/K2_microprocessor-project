@@ -8,7 +8,7 @@ CFLAGS=-Wall -Wextra
 all: k2asm k2sim
 
 k2asm: assembler.c
-	$(CC) $(CFLAGS) -o k2asm assembler.c
+	$(CC) $(CFLAGS) -o k2asm assimblyEdt.c
 
 k2sim: simulator.c
 	$(CC) $(CFLAGS) -o k2sim simulator.c
